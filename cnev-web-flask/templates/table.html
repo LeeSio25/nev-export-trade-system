@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}{{ tbl.label }} · {{ SYS_SHORT }}{% endblock %}
+{% block crumb %}<span class="sep">/</span><span>{{ module_title }}</span><span class="sep">/</span><span>{{ tbl.label }}</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>{{ tbl.label }} <code class="tname">{{ tbl.name }}</code></h1>
+    <p>{{ tbl.comment or '数据表' }} · 共 <b>{{ data.total }}</b> 条记录 · 主键
+      {% for k in tbl.pk %}<code>{{ k }}</code>{% if not loop.last %} + {% endif %}{% endfor %}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{{ url_with(_path=url_for('table_export', table=tbl.name), page=None, size=None) }}">
+      <svg class="ic"><use href="#i-download"/></svg> 导出 CSV
+    </a>
+    <a class="btn ghost" href="{{ url_for('dictionary') }}#t-{{ tbl.name }}">表结构</a>
+    <a class="btn primary" href="{{ url_for('table_new', table=tbl.name) }}">
+      <svg class="ic"><use href="#i-plus"/></svg> 新增记录
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <form class="toolbar" method="get" action="{{ url_for('table_list', table=tbl.name) }}">
+    <div class="search-box">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input type="text" name="q" value="{{ keyword }}" placeholder="搜索 {{ tbl.label }} 中的所有文本字段…">
+    </div>
+    <select name="size" onchange="this.form.submit()">
+      {% for s in [10, 20, 50, 100] %}
+      <option value="{{ s }}" {% if size==s %}selected{% endif %}>{{ s }} 条/页</option>
+      {% endfor %}
+    </select>
+    {% for f in filter_fields %}
+    <input type="hidden" name="f_{{ f.name }}" value="{{ f.value }}">
+    {% endfor %}
+    {% if missing %}<input type="hidden" name="missing" value="{{ missing }}">{% endif %}
+    {% if sort %}<input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="dir" value="{{ dir }}">{% endif %}
+    <button class="btn" type="submit">查询</button>
+    {% if keyword or sort or filters or missing %}
+    <a class="btn ghost" href="{{ url_for('table_list', table=tbl.name) }}">重置</a>
+    {% endif %}
+    <span class="toolbar-hint">模糊匹配 · 点击表头排序</span>
+  </form>
+
+  {% if missing_label and not filter_fields %}
+  <div class="filter-bar">
+    <span class="f-label">筛选</span>
+    <span class="f-chip">
+      {{ missing_label }}
+      <a href="{{ url_with(missing=None, page=None) }}" title="取消该条件">×</a>
+    </span>
+    <a class="reset" href="{{ url_for('table_list', table=tbl.name) }}">清除筛选</a>
+  </div>
+  {% endif %}
+
+  {% if filter_fields %}
+  <form class="filter-bar" method="get" action="{{ url_for('table_list', table=tbl.name) }}">
+    <span class="f-label">筛选</span>
+    <input type="hidden" name="q" value="{{ keyword }}">
+    <input type="hidden" name="size" value="{{ size }}">
+    {% if missing %}<input type="hidden" name="missing" value="{{ missing }}">{% endif %}
+    {% if sort %}<input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="dir" value="{{ dir }}">{% endif %}
+    {% if missing_label %}
+    <span class="f-chip">
+      {{ missing_label }}
+      <a href="{{ url_with(missing=None, page=None) }}" title="取消该条件">×</a>
+    </span>
+    {% endif %}
+    {% for f in filter_fields %}
+    <select name="f_{{ f.name }}" onchange="this.form.submit()" class="{% if f.value %}active{% endif %}"
+            title="按{{ f.label }}筛选">
+      <option value="">{{ f.label }}：全部</option>
+      {% for o in f.options %}
+      <option value="{{ o.v }}" {% if f.value|string == o.v|string %}selected{% endif %}>{{ o.l }}</option>
+      {% endfor %}
+    </select>
+    {% endfor %}
+    {% if filters or missing %}<a class="reset" href="{{ url_for('table_list', table=tbl.name, q=keyword, size=size) }}">清除筛选</a>{% endif %}
+  </form>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="idx stick-1">#</th>
+          {% for col in tbl.columns %}
+          <th class="{% if col.name in tbl.pk %}is-pk{% endif %} {% if loop.first %}stick-2{% endif %}">
+            {% set next_dir = 'desc' if (sort == col.name and dir == 'asc') else 'asc' %}
+            <a href="{{ url_with(sort=col.name, dir=next_dir, page=None) }}">
+              {{ col.short or col.comment or col.name }}
+              {% if col.name in tbl.pk %}<i class="pk-dot" title="主键"></i>{% endif %}
+              {% if sort == col.name %}<span class="sort-ind">{{ '↑' if dir=='asc' else '↓' }}</span>{% endif %}
+            </a>
+          </th>
+          {% endfor %}
+          <th class="ops">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data.rows %}
+        <tr>
+          <td class="idx stick-1">{{ (page_no - 1) * size + loop.index }}</td>
+          {% for col in tbl.columns %}
+          {% set v = row[col.name] %}
+          {% set label = row.get(col.name ~ '__label') %}
+          <td class="{% if col.name in tbl.pk %}is-pk{% endif %} {% if loop.first %}stick-2{% endif %} {% if col.type in ['decimal','double','float','int','bigint','smallint','tinyint'] %}ta-r mono{% endif %} {% if col.type in ['date','datetime','timestamp'] %}mono{% endif %}">
+            {% if v is none or v == '' %}
+              <span class="null">—</span>
+            {% elif col.type in ['decimal','double','float'] %}
+              {{ v|money }}
+            {% elif label %}
+              <span class="fk-cell"><span class="fk-name" title="{{ label }}">{{ label }}</span><b class="mono">{{ v }}</b></span>
+            {% elif col.name in ['OrderStatus','WaybillStatus','CustomsStatus','HandleStatus','PolicyStatus','CertStatus','ModelStatus','CertResult'] %}
+              <span class="tag {{ 'tag-ok' if v in ['签收','已放行','已处理','有效','通过','在售'] else ('tag-run' if v in ['在途','到港','查验','处理中'] else ('tag-err' if v in ['已过期','失效','不通过','停产','召回'] else 'tag-idle')) }}">{{ v }}</span>
+            {% elif col.name in ['IsBeltRoad','IsRCEP','RecallFlag'] %}
+              <span class="tag {{ 'tag-ok' if v == 'Y' else 'tag-idle' }}">{{ v }}</span>
+            {% elif col.name == 'OrderNo' %}
+              <a class="pk-link mono" href="{{ url_for('order_detail', order_no=v) }}" title="查看订单全景">{{ v }}</a>
+            {% else %}
+              <span title="{{ v }}">{{ v }}</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+          <td class="ops">
+            <div class="row-ops">
+              {% set qs = [] %}
+              {% for k in tbl.pk %}{% set _ = qs.append('pk_' ~ k ~ '=' ~ (row[k]|string|urlencode)) %}{% endfor %}
+              <a class="icon-btn" title="编辑"
+                 href="{{ url_for('table_edit', table=tbl.name) }}?{{ qs|join('&') }}">
+                <svg class="ic"><use href="#i-edit"/></svg>
+              </a>
+              <form method="post" action="{{ url_for('table_delete', table=tbl.name, page=page_no) }}"
+                    onsubmit="return confirm('确定删除这条「{{ tbl.label }}」记录吗？此操作不可撤销。')">
+                {% for k in tbl.pk %}<input type="hidden" name="pk_{{ k }}" value="{{ row[k] }}">{% endfor %}
+                <button class="icon-btn danger" type="submit" title="删除"><svg class="ic"><use href="#i-trash"/></svg></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ tbl.columns|length + 2 }}" class="empty">没有符合条件的记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if data.total > 0 %}
+  <div class="pager">
+    <span class="pager-info">第 {{ page_no }} / {{ pages }} 页，共 {{ data.total }} 条</span>
+    <div class="pager-btns">
+      <a class="pg {% if page_no <= 1 %}disabled{% endif %}"
+         href="{{ url_with(page=1) }}">首页</a>
+      <a class="pg {% if page_no <= 1 %}disabled{% endif %}"
+         href="{{ url_with(page=page_no-1) }}">上一页</a>
+      {% for p in range(1, pages + 1) %}
+        {% if p == 1 or p == pages or (p >= page_no - 2 and p <= page_no + 2) %}
+          <a class="pg {% if p == page_no %}active{% endif %}"
+             href="{{ url_with(page=p) }}">{{ p }}</a>
+        {% elif p == page_no - 3 or p == page_no + 3 %}
+          <span class="pg more">…</span>
+        {% endif %}
+      {% endfor %}
+      <a class="pg {% if page_no >= pages %}disabled{% endif %}"
+         href="{{ url_with(page=page_no+1) }}">下一页</a>
+      <a class="pg {% if page_no >= pages %}disabled{% endif %}"
+         href="{{ url_with(page=pages) }}">末页</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<details class="struct">
+  <summary>查看「{{ tbl.label }}」字段定义（{{ tbl.columns|length }} 列 · {{ tbl.fks|length }} 个外键）</summary>
+  <div class="table-wrap">
+    <table class="data-table small">
+      <thead><tr><th>字段</th><th>类型</th><th>可空</th><th>约束</th><th>说明</th></tr></thead>
+      <tbody>
+        {% for col in tbl.columns %}
+        <tr>
+          <td class="mono">{{ col.name }}</td>
+          <td class="mono">{{ col.column_type }}</td>
+          <td>{{ '是' if col.nullable else '否' }}</td>
+          <td>
+            {% if col.name in tbl.pk %}<span class="tag tag-pk">PK</span>{% endif %}
+            {% if col.fk %}<span class="tag tag-fk">FK → {{ col.fk.table }}</span>{% endif %}
+            {% if col.auto %}<span class="tag tag-idle">AUTO</span>{% endif %}
+          </td>
+          <td class="wrap" title="{{ col.comment or '' }}">{{ col.comment or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+
+{% endblock %}

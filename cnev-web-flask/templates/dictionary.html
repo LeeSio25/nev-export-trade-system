@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}数据字典 / ER · {{ SYS_SHORT }}{% endblock %}
+{% block crumb %}<span class="sep">/</span><span>数据字典 / ER</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>数据字典与关系模式</h1>
+    <p>由 <code>information_schema</code> 实时读取，与数据库中的真实结构完全一致</p>
+  </div>
+  <div class="page-actions">
+    <span class="pill">数据库 cnev_export_trade_db</span>
+  </div>
+</div>
+
+<section class="kpi-row small">
+  <div class="kpi-card"><div class="kpi-top"><span>数据表</span></div><b class="kpi-num">{{ tables|length }}</b></div>
+  <div class="kpi-card"><div class="kpi-top"><span>字段总数</span></div><b class="kpi-num">{{ total_cols }}</b></div>
+  <div class="kpi-card"><div class="kpi-top"><span>外键关系</span></div><b class="kpi-num">{{ total_fk }}</b></div>
+  <div class="kpi-card accent"><div class="kpi-top"><span>范式</span></div><b class="kpi-num">3NF<small>+</small></b></div>
+</section>
+
+<div class="dict-nav">
+  <span class="dict-nav-label">快速定位</span>
+  {% for m in nav_modules %}
+  <div class="dict-nav-group">
+    <b>{{ m.no }}</b>
+    {% for t in m['items'] %}<a href="#t-{{ t.name }}">{{ t.label }}</a>{% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{% for m in nav_modules %}
+<section class="module-block" id="m-{{ m.key }}">
+  <h2 class="module-title"><i>{{ m.no }}</i>{{ m.title }}</h2>
+  <div class="dict-grid">
+    {% for t in m['items'] %}
+    <div class="card dict-card" id="t-{{ t.name }}">
+      <div class="dict-head">
+        <div>
+          <h3>{{ t.label }}</h3>
+          <code>{{ t.name }}</code>
+        </div>
+        <span class="chip">{{ t.row_count }} 行</span>
+      </div>
+      <table class="dict-table">
+        <thead><tr><th>字段</th><th>类型</th><th>键</th><th>说明</th></tr></thead>
+        <tbody>
+          {% for c in t.columns %}
+          <tr>
+            <td class="mono" title="{{ c.name }}">{{ c.name }}</td>
+            <td class="mono dim" title="{{ c.column_type }}">{{ c.column_type }}</td>
+            <td>
+              {% if c.name in t.pk %}<span class="tag tag-pk">PK</span>{% endif %}
+              {% if c.fk %}<span class="tag tag-fk">FK</span>{% endif %}
+              {% if not c.nullable %}<span class="tag tag-nn">NN</span>{% endif %}
+            </td>
+            <td title="{{ c.comment or '' }}{% if c.fk %} → {{ c.fk.table }}.{{ c.fk.col }}{% endif %}">{{ c.comment or '—' }}
+              {% if c.fk %}<span class="fk-ref">→ {{ c.fk.table }}.{{ c.fk.col }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<section class="card">
+  <div class="card-head"><div><h2>关系模式速查</h2><p>与报告第 3 章关系模型一一对应</p></div></div>
+  <div class="card-body">
+    <div class="schema-lines">
+      {% for t in tables.values() %}
+      <div class="schema-line">
+        <b>{{ t.label }}</b><code>{{ t.name }}</code>
+        <span>( {{ t.columns|map(attribute='name')|join(', ') }} )</span>
+        <em>主键：{{ t.pk|join(' + ') or '无' }}</em>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

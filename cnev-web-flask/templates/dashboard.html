@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% from "_charts.html" import auto_chart, line_chart, bar_chart, donut_chart %}
+{% block title %}系统概览 · {{ SYS_SHORT }}{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+  <div class="hero-main">
+    <h1>中国新能源汽车出口贸易数据管理系统</h1>
+    <p>覆盖“企业 → 车型 → 订单 → 物流 → 政策认证 → 报关结算”全链路，数据实时取自
+      <code>cnev_export_trade_db</code>。</p>
+  </div>
+  <div class="hero-badges">
+    <div class="hb"><b>{{ total_tables }}</b><span>数据表</span></div>
+    <div class="hb"><b>{{ kpi.countries }}</b><span>覆盖目的国</span></div>
+    <div class="hb"><b>{{ kpi.enterprises }}</b><span>整车企业</span></div>
+  </div>
+</section>
+
+<section class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-top"><span>出口订单</span><svg class="ic"><use href="#i-doc"/></svg></div>
+    <b class="kpi-num">{{ kpi.orders }}</b>
+    <span class="kpi-sub">笔订单记录</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><span>出口台数</span><svg class="ic"><use href="#i-ship"/></svg></div>
+    <b class="kpi-num">{{ kpi.units }}</b>
+    <span class="kpi-sub">辆（订单明细汇总）</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><span>合同金额（折￥）</span><svg class="ic"><use href="#i-cash"/></svg></div>
+    <b class="kpi-num" title="{{ kpi.amount|money }} 元">{{ (kpi.amount / 10000)|round(2)|num }}<small>万元</small></b>
+    <span class="kpi-sub">折人民币 · 覆盖 {{ kpi.currencies }} 个币种</span>
+  </div>
+  <div class="kpi-card accent">
+    <div class="kpi-top"><span>“一带一路”占比</span><svg class="ic"><use href="#i-globe"/></svg></div>
+    <b class="kpi-num">{{ kpi.belt_ratio }}<small>%</small></b>
+    <span class="kpi-sub">共建国家 {{ kpi.belt_units }} 辆</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><span>出口退税</span><svg class="ic"><use href="#i-stamp"/></svg></div>
+    <b class="kpi-num" title="{{ kpi.refund|money }} 元">{{ (kpi.refund / 10000)|round(2)|num }}<small>万元</small></b>
+    <span class="kpi-sub">元（customs 汇总）</span>
+  </div>
+  <div class="kpi-card warn">
+    <div class="kpi-top"><span>认证预警</span><svg class="ic"><use href="#i-shield"/></svg></div>
+    <b class="kpi-num">{{ kpi.expiring }}</b>
+    <span class="kpi-sub">张已过期或临期{% if kpi.expired %}，其中 {{ kpi.expired }} 张已过期{% endif %}</span>
+  </div>
+</section>
+
+<section class="todo-row">
+  {% for t in todo %}
+  <a class="todo {{ t.tone }}" href="{{ t.url }}">
+    <i class="tdot"></i>
+    <div><b>{{ t.count }}</b><span>{{ t.text }}</span></div>
+  </a>
+  {% endfor %}
+</section>
+
+<section class="grid-2-wide">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>出口趋势</h2>
+        <p>ExportOrder ⋈ OrderDetail，按年分组汇总</p>
+        {% if charts.trend.note %}<p class="chart-note">{{ charts.trend.note }}</p>{% endif %}
+      </div>
+      <a class="link-btn" href="{{ url_for('stats_page', only='trend') }}">查看统计 →</a>
+    </div>
+    <div class="card-body">
+      {% if charts.trend.ok and charts.trend.chart_data %}
+        {{ auto_chart(charts.trend.chart_data, ' 台') }}
+      {% else %}
+        <div class="empty">暂无数据</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>“一带一路”出口结构</h2>
+        <p>按目的国 IsBeltRoad 标记分组</p>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if charts.beltRoad.ok and charts.beltRoad.chart_data %}
+        {{ donut_chart(charts.beltRoad.chart_data, ' 台') }}
+      {% else %}
+        <div class="empty">暂无数据</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>目的国出口排名</h2>
+        <p>Country ⋈ ExportOrder ⋈ OrderDetail</p>
+      </div>
+      <a class="link-btn" href="{{ url_for('stats_page', only='countryRank') }}">全部 →</a>
+    </div>
+    <div class="card-body">
+      {% if charts.countryRank.ok and charts.countryRank.chart_data %}
+        {{ bar_chart(charts.countryRank.chart_data, ' 台', 8) }}
+      {% else %}
+        <div class="empty">暂无数据</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>最近订单</h2>
+        <p>按订单日期倒序</p>
+      </div>
+      <a class="link-btn" href="{{ url_for('table_list', table='exportorder') }}">订单管理 →</a>
+    </div>
+    <div class="card-body tight">
+      <table class="mini-table">
+        <thead>
+          <tr><th>订单号</th><th>企业</th><th>目的国</th><th class="ta-r">金额</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          {% for r in recent %}
+          <tr>
+            <td class="mono"><a class="pk-link" href="{{ url_for('order_detail', order_no=r.OrderNo) }}">{{ r.OrderNo }}</a></td>
+            <td class="ellipsis">{{ r.EntName or '—' }}</td>
+            <td>{{ r.CountryName or '—' }}</td>
+            <td class="ta-r mono">{{ r.ContractAmount|money }} <em class="cur">{{ r.CurrencyCode }}</em></td>
+            <td>
+              {% set st = r.OrderStatus or '' %}
+              <span class="tag {{ 'tag-ok' if st=='签收' else ('tag-run' if st in ['在途','到港'] else 'tag-idle') }}">{{ st or '—' }}</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="empty">暂无订单</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{% if warn %}
+<section class="card notice">
+  <div class="card-head">
+    <div>
+      <h2>⚠ 认证到期提醒</h2>
+      <p>已过期或 180 天内到期的车型认证共 {{ kpi.expiring }} 张（其中 {{ kpi.expired }} 张已过期），此处列最早到期的 5 张</p>
+    </div>
+    <a class="link-btn" href="{{ url_for('stats_page', only='certWarn') }}">预警清单 →</a>
+  </div>
+  <div class="card-body tight">
+    <table class="mini-table">
+      <thead><tr><th>车型</th><th>认证</th><th>到期日期</th><th class="ta-r">剩余天数</th></tr></thead>
+      <tbody>
+        {% for w in warn %}
+        <tr>
+          <td>{{ w.ModelName }}</td>
+          <td class="ellipsis">{{ w.CertName }}</td>
+          <td class="mono">{{ w.ExpireDate }}</td>
+          <td class="ta-r">
+            <span class="tag {{ 'tag-err' if w.days < 0 else 'tag-warn' }}">
+              {{ w.days }} 天
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>已新增 {{ tbl.label }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="embed-body">
+<main class="embed-main">
+  <div class="card embed-done">
+    <div class="embed-ok"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6"/></svg></div>
+    <h2>已新增「{{ tbl.label }}」</h2>
+    <p class="embed-key"><code>{{ value }}</code>{% if label and label != value %} · {{ label }}{% endif %}</p>
+    <p class="hint">已自动填回上一层表单，窗口即将关闭。</p>
+    <button class="btn primary" type="button" id="embedBack">立即返回</button>
+  </div>
+</main>
+<script>
+(function () {
+  var payload = {
+    cnev: 'ref-created',
+    table: {{ tbl.name|tojson }},
+    v: {{ value|tojson }},
+    l: {{ (label or value)|tojson }}
+  };
+  function back() {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(payload, '*');
+      } else {
+        window.close();
+      }
+    } catch (e) { /* 跨域时静默放弃，由用户手动关闭 */ }
+  }
+  document.getElementById('embedBack').addEventListener('click', back);
+  setTimeout(back, 260);
+})();
+</script>
+</body>
+</html>

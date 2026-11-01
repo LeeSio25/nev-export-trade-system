@@ -1,0 +1,11 @@
+# 本地口令文件：只在本机存在，绝不提交、不打包
+secrets_local.py
+
+# Python
+__pycache__/
+*.pyc
+secrets_local.py
+
+# 运行产物
+server.log
+shots/

@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}订单 {{ o.OrderNo }} · {{ SYS_SHORT }}{% endblock %}
+{% block crumb %}
+<span class="sep">/</span><a href="{{ url_for('table_list', table='exportorder') }}">出口订单</a>
+<span class="sep">/</span><span>{{ o.OrderNo }}</span>
+{% endblock %}
+
+{% block content %}
+
+{% set st = o.OrderStatus or '未发货' %}
+
+<div class="page-head">
+  <div>
+    <h1>
+      <span class="mono">{{ o.OrderNo }}</span>
+      <span class="tag {{ 'tag-ok' if st=='签收' else ('tag-run' if st in ['在途','到港'] else 'tag-idle') }}">{{ st }}</span>
+    </h1>
+    <p>
+      {{ o.EntName or '—' }} → {{ o.DealerName or '—' }} · {{ o.CountryName or '—' }}
+      {% if o.IsBeltRoad == 'Y' %}<span class="tag tag-ok">一带一路</span>{% endif %}
+      · 订单日期 {{ o.OrderDate }}
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{{ url_for('table_list', table='exportorder') }}">返回订单列表</a>
+    <a class="btn ghost" href="{{ url_for('table_edit', table='exportorder') }}?pk_OrderNo={{ o.OrderNo|urlencode }}">
+      <svg class="ic"><use href="#i-edit"/></svg> 修改订单
+    </a>
+    <a class="btn primary" href="{{ url_for('table_new', table='waybill') }}">
+      <svg class="ic"><use href="#i-plus"/></svg> 录入运单
+    </a>
+  </div>
+</div>
+
+<section class="kpi-row small">
+  <div class="kpi-card">
+    <div class="kpi-top"><span>合同金额</span></div>
+    <b class="kpi-num">{{ o.ContractAmount|num }}<small>{{ o.CurrencyCode }}</small></b>
+    <span class="kpi-sub">{{ o.CurrencyName or '' }}</span>
+  </div>
+  <div class="kpi-card accent">
+    <div class="kpi-top"><span>折人民币</span></div>
+    <b class="kpi-num">{{ amount_cny|num if amount_cny else '—' }}</b>
+    <span class="kpi-sub">{% if rate %}按最新中间价 {{ rate }} 折算{% else %}该币种暂无汇率{% endif %}</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><span>出口台数</span></div>
+    <b class="kpi-num">{{ total_qty }}</b>
+    <span class="kpi-sub">{{ lines|length }} 个车型</span>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><span>明细金额</span></div>
+    <b class="kpi-num">{{ total_amt|num }}</b>
+    <span class="kpi-sub">{{ o.CurrencyCode }} · 各明细合计</span>
+  </div>
+  <div class="kpi-card {% if not customs %}warn{% endif %}">
+    <div class="kpi-top"><span>报关状态</span></div>
+    <b class="kpi-num" style="font-size:17px">{{ customs.CustomsStatus if customs else '未报关' }}</b>
+    <span class="kpi-sub">{% if customs %}{{ customs.DeclNo }}{% else %}尚未生成报关单{% endif %}</span>
+  </div>
+</section>
+
+<!-- 履约进度 -->
+<div class="card">
+  <div class="card-head">
+    <div><h2>履约进度</h2><p>订单 → 离港 → 到港 → 签收；日期取自订单日期与运单实际日期</p></div>
+    {% if eta_tag %}
+      <span class="tag {{ 'tag-err' if eta_tag.level == 'err' else ('tag-warn' if eta_tag.level == 'wait' else 'tag-ok') }}">{{ eta_tag.text }}</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="flow">
+      {% for name in steps %}
+      {% set i = loop.index0 %}
+      <div class="flow-step {% if i < cur_step %}done{% elif i == cur_step %}current{% endif %}">
+        <div class="flow-dot">{{ i + 1 }}</div>
+        <div class="flow-body">
+          <b>{{ name }}</b>
+          {% if step_dates[i] %}
+          <span>{{ step_dates[i] }}</span>
+          {% elif i > cur_step %}
+          <span>未开始</span>
+          {% else %}
+          <span title="运单表中未记录该环节日期">—</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if cur_step >= 3 and not step_dates[3] %}
+    <p class="flow-note">签收环节按订单状态标记；运单表未设签收日期字段，故不臆造具体日期。</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="grid-order">
+  <div class="card">
+    <div class="card-head"><div><h2>订单信息</h2><p>{{ o.TradeTerm }} · {{ o.PayMethod }}</p></div></div>
+    <div class="card-body">
+      <dl class="kv">
+        <dt>出口企业</dt><dd>{{ o.EntName or '—' }}{% if o.Province %}<em>{{ o.Province }}</em>{% endif %}</dd>
+        <dt>品牌</dt><dd>{{ o.Brand or '—' }}</dd>
+        <dt>海外经销商</dt><dd>{{ o.DealerName or '—' }}{% if o.DealerType %}<em>{{ o.DealerType }} · 信用 {{ o.CreditLevel or '-' }}</em>{% endif %}</dd>
+        <dt>目的国</dt><dd>{{ o.CountryName or '—' }}（{{ o.CountryCode }}）{% if o.Continent %}<em>{{ o.Continent }}</em>{% endif %}</dd>
+        <dt>贸易术语</dt><dd>{{ o.TradeTerm or '—' }}</dd>
+        <dt>付款方式</dt><dd>{{ o.PayMethod or '—' }}</dd>
+        <dt>业务员</dt><dd>{{ o.Salesperson or '—' }}</dd>
+        <dt>备注</dt><dd>{{ o.Remark or '—' }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div><h2>物流运单</h2><p>{{ waybills|length }} 张运单</p></div>
+      <a class="link-btn" href="{{ url_for('table_list', table='waybill', q=o.OrderNo) }}">按订单号查看 →</a>
+    </div>
+    {% if waybills %}
+    <div class="table-wrap">
+      <table class="data-table small wb-table">
+        <colgroup>
+          <col style="width:21%"><col style="width:21%"><col style="width:25%">
+          <col style="width:23%"><col style="width:10%">
+        </colgroup>
+        <thead><tr><th>运单号</th><th>承运商</th><th>航线</th><th>行程</th><th>状态</th></tr></thead>
+        <tbody>
+          {% for w in waybills %}
+          <tr>
+            <td class="mono">{{ w.WaybillNo }}</td>
+            <td><span class="ellipsis" title="{{ w.CarrierName or '' }}">{{ w.CarrierName or '—' }}</span></td>
+            <td><span class="ellipsis" title="{{ w.DepartPort or '' }} → {{ w.ArrivePort or '' }}">{{ w.DepartPort or '—' }} → {{ w.ArrivePort or '—' }}</span></td>
+            <td>
+              <div class="trip">
+                <span><b>离</b>{{ w.ETD.strftime('%m-%d') if w.ETD else '—' }}</span>
+                <span><b>预计</b>{{ w.ETA.strftime('%m-%d') if w.ETA else '—' }}</span>
+                <span class="{{ 'late' if w.eta_diff and w.eta_diff > 0 else 'ok' }}"><b>实到</b>{{ w.ActualArriveDate.strftime('%m-%d') if w.ActualArriveDate else '—' }}</span>
+              </div>
+            </td>
+            <td><span class="tag {{ 'tag-ok' if w.WaybillStatus=='签收' else 'tag-run' }}">{{ w.WaybillStatus or '—' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="table-foot">船名航次：{{ waybills[0].VesselVoyage or '—' }} · 集装箱：{{ waybills[0].ContainerNo or '—' }}</div>
+    {% else %}
+    <div class="card-body">
+      <div class="empty">
+        这笔订单还没有运单<br>
+        <a class="link-btn" href="{{ url_for('table_new', table='waybill') }}">现在录入运单（OrderNo 填 {{ o.OrderNo }}）→</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<div class="card">
+  <div class="card-head">
+    <div><h2>订单明细</h2><p>{{ lines|length }} 行 · 合计 {{ total_qty }} 台 / {{ total_amt|num }} {{ o.CurrencyCode }}</p></div>
+    <a class="link-btn" href="{{ url_for('table_new', table='orderdetail') }}">增加明细 →</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table small">
+      <thead><tr><th>车型编号</th><th>车型名称</th><th>类型</th><th>续航</th><th class="ta-r">数量</th><th class="ta-r">单价</th><th class="ta-r">金额</th><th>配置版本</th></tr></thead>
+      <tbody>
+        {% for l in lines %}
+        <tr>
+          <td class="mono">{{ l.ModelID }}</td>
+          <td>{{ l.ModelName or '—' }}</td>
+          <td>{{ l.VehicleType or '—' }}</td>
+          <td>{{ l.RangeKm or '—' }} km</td>
+          <td class="ta-r mono">{{ l.Quantity }}</td>
+          <td class="ta-r mono">{{ l.UnitPrice|num }}</td>
+          <td class="ta-r mono">{{ l.Amount|num }}</td>
+          <td class="ellipsis">{{ l.ConfigVersion or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty">还没有录入明细</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if lines %}
+      <tfoot>
+        <tr class="sum-row">
+          <td colspan="4">合计</td>
+          <td class="ta-r mono">{{ total_qty }}</td>
+          <td></td>
+          <td class="ta-r mono">{{ total_amt|num }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head"><div><h2>报关信息</h2><p>报关单与退税</p></div></div>
+    {% if customs %}
+    <div class="card-body">
+      <dl class="kv">
+        <dt>报关单号</dt><dd class="mono">{{ customs.DeclNo }}</dd>
+        <dt>申报日期</dt><dd class="mono">{{ customs.DeclDate }}</dd>
+        <dt>HS 编码</dt><dd class="mono">{{ customs.HSCode or '—' }}</dd>
+        <dt>监管方式</dt><dd>{{ customs.SuperviseMode or '—' }}</dd>
+        <dt>申报口岸</dt><dd>{{ customs.DeclPort or '—' }}</dd>
+        <dt>退税金额</dt><dd class="mono">{{ customs.TaxRefund|num }} 元</dd>
+        <dt>通关状态</dt><dd><span class="tag {{ 'tag-ok' if customs.CustomsStatus=='已放行' else 'tag-warn' }}">{{ customs.CustomsStatus or '—' }}</span></dd>
+      </dl>
+    </div>
+    {% else %}
+    <div class="card-body">
+      <div class="empty">
+        尚未报关<br>
+        <a class="link-btn" href="{{ url_for('table_new', table='customs') }}">录入报关单（OrderNo 填 {{ o.OrderNo }}）→</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card {% if certs %}notice{% endif %}">
+    <div class="card-head">
+      <div><h2>合规提示</h2><p>本单车型在「{{ o.CountryName or o.CountryCode }}」的认证情况（180 天内到期）</p></div>
+    </div>
+    {% if certs %}
+    <div class="card-body tight">
+      <table class="mini-table">
+        <thead><tr><th>车型</th><th>认证</th><th>到期日</th><th class="ta-r">剩余</th></tr></thead>
+        <tbody>
+          {% for c in certs %}
+          <tr>
+            <td>{{ c.ModelName }}</td>
+            <td class="ellipsis">{{ c.CertName }}</td>
+            <td class="mono">{{ c.ExpireDate }}</td>
+            <td class="ta-r">
+              {% if c.days < 0 %}
+              <span class="tag tag-err">已过期 {{ -c.days }} 天</span>
+              {% elif c.days <= 60 %}
+              <span class="tag tag-err">剩 {{ c.days }} 天</span>
+              {% else %}
+              <span class="tag tag-warn">剩 {{ c.days }} 天</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+      {% if dest_cert_total %}
+      <div class="empty">本单车型的目的国认证均在有效期内，无临期项</div>
+      {% else %}
+      <div class="cert-alert">
+        本单车型尚未查到「{{ o.CountryName or o.CountryCode }}」的认证记录，
+        出口前请先确认该国市场准入要求（其他国家的认证不能替代）。
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

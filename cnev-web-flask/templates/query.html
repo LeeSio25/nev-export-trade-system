@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}SQL 演示台 · {{ SYS_SHORT }}{% endblock %}
+{% block crumb %}<span class="sep">/</span><span>SQL 演示台</span>{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>SQL 演示台</h1>
+    <p>只读查询控制台，用于答辩现场验证核心 SQL 能力（多表连接 / 分组聚合 / 子查询 / 窗口函数）</p>
+  </div>
+  <div class="page-actions">
+    <span class="badge-readonly">只读模式 · 最多返回 300 行</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div><h2>预置示例</h2><p>点击加载，直接执行</p></div></div>
+  <div class="card-body">
+    <div class="preset-list">
+      {% for p in presets %}
+      <a class="preset" href="{{ url_for('query_page', preset=loop.index0) }}">
+        <b>{{ p.title }}</b>
+        <span>{{ p.note }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<form class="card" method="post" action="{{ url_for('query_page') }}">
+  <div class="card-head"><div><h2>SQL 编辑器</h2><p>仅允许 SELECT / WITH / SHOW / EXPLAIN</p></div></div>
+  <div class="card-body">
+    <textarea class="sql-input" name="sql" rows="10" spellcheck="false"
+              placeholder="SELECT * FROM exportorder LIMIT 10">{{ sql }}</textarea>
+    <div class="form-btns mt">
+      <button class="btn ghost" type="reset">清空</button>
+      <button class="btn primary" type="submit">执行查询</button>
+    </div>
+  </div>
+</form>
+
+{% if db_error %}
+<div class="card error-card">
+  <div class="card-head"><div><h2>执行出错</h2><p>MySQL 返回的原始错误信息</p></div></div>
+  <pre class="error-pre">{{ db_error }}</pre>
+</div>
+{% endif %}
+
+{% if ms is not none and not db_error %}
+<div class="card">
+  <div class="card-head">
+    <div><h2>查询结果</h2><p>共 {{ rows|length }} 行 · 耗时 {{ ms }} ms</p></div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table small">
+      <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          {% for c in columns %}
+          {% set v = r[c] %}
+          <td class="{% if is_num(v) %}ta-r mono{% endif %}">
+            {% if v is none %}<span class="null">NULL</span>{% elif is_num(v) %}{{ v|num }}{% else %}{{ v }}{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ columns|length or 1 }}" class="empty">查询没有返回任何行</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

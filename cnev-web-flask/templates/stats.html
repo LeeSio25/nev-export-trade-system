@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% from "_charts.html" import auto_chart %}
+{% block title %}统计分析与思政展示 · {{ SYS_SHORT }}{% endblock %}
+{% block crumb %}<span class="sep">/</span><span>统计分析与思政展示</span>{% endblock %}
+
+{# ---------- 统计结果表格 ---------- #}
+{% macro result_table(b) %}
+{% set lim = b.max_rows or 12 %}
+<div class="table-wrap">
+  <table class="data-table small">
+    <thead>
+      <tr>
+        {% for c in b.columns %}<th class="{% if is_num(b.rows[0][c]) %}ta-r{% endif %}">{{ c }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in b.rows[:lim] %}
+      <tr>
+        {% for c in b.columns %}
+        {% set v = r[c] %}
+        <td class="{% if is_num(v) %}ta-r mono{% endif %}">
+          {% if v is none %}<span class="null">—</span>
+          {% elif is_num(v) %}{{ v|num }}
+          {% elif loop.first %}<b>{{ v }}</b>
+          {% else %}{{ v }}{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>统计分析与思政展示</h1>
+    <p>模块 6 全部功能点 + 加分项（预警 / 可视化），每条统计都是真实 SQL 实时计算</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="{{ url_for('query_page') }}">在 SQL 演示台查看语句</a>
+  </div>
+</div>
+
+<section class="kpi-row small">
+  <div class="kpi-card"><div class="kpi-top"><span>订单总数</span></div><b class="kpi-num">{{ kpi.orders }}</b></div>
+  <div class="kpi-card"><div class="kpi-top"><span>出口台数</span></div><b class="kpi-num">{{ kpi.units }}</b></div>
+  <div class="kpi-card"><div class="kpi-top"><span>目的国</span></div><b class="kpi-num">{{ kpi.countries }}</b></div>
+  <div class="kpi-card accent"><div class="kpi-top"><span>“一带一路”占比</span></div><b class="kpi-num">{{ kpi.belt_ratio }}<small>%</small></b></div>
+  <div class="kpi-card warn"><div class="kpi-top"><span>认证预警</span></div><b class="kpi-num">{{ kpi.expiring }}</b></div>
+</section>
+
+<div class="stat-nav">
+  {% for b in blocks %}
+  <a href="#s-{{ b.key }}" class="{% if not b.ok %}err{% endif %}">{{ b.title }}</a>
+  {% endfor %}
+</div>
+
+{% if hidden %}
+<div class="filter-note">
+  另有 {{ hidden|length }} 项统计因库中暂无数据，暂未展示。
+  <a class="link-btn" href="{{ url_for('stats_page', show_empty=1) }}">仍要查看 →</a>
+</div>
+{% endif %}
+
+{% if only %}
+<div class="filter-note">
+  当前仅显示：<b>{{ blocks[0].title if blocks else only }}</b>
+  <a class="link-btn" href="{{ url_for('stats_page') }}">显示全部统计</a>
+</div>
+{% endif %}
+
+{% for b in blocks %}
+<section class="card stat-card" id="s-{{ b.key }}">
+  <div class="card-head">
+    <div>
+      <h2>{{ b.title }}
+        <span class="chip">{{ b.sub }}</span>
+      </h2>
+      <p>{{ b.desc }}</p>
+      {% if b.chart_note %}<p class="chart-note">{{ b.chart_note }}</p>{% endif %}
+    </div>
+    <span class="ms">{{ b.ms }} ms</span>
+  </div>
+
+  {% if not b.ok %}
+  <div class="error-box">SQL 执行失败：{{ b.error }}</div>
+  {% elif b.chart_data and b.chart_data.type == 'note' %}
+  {# 单年度等无法成图的情况：说明占整行，表格用满宽度 #}
+  <div class="stat-note-line">{{ b.chart_data.text }}</div>
+  <div class="stat-table-full">
+    {{ result_table(b) }}
+    {% if b.rows|length > (b.max_rows or 12) %}
+    <div class="table-foot">仅显示前 {{ b.max_rows or 12 }} 行，共 {{ b.rows|length }} 行</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="stat-body {% if not b.chart_data %}solo{% endif %}">
+    {% if b.chart_data %}
+    <div class="stat-chart">
+      {% if b.chart_data.all_zero %}
+      <div class="chart-note-box">
+        该维度下所有数值均为 0<br>
+        <span style="font-size:12px">现有订单数据的日期区间未覆盖相关时点，暂无可视化对比</span>
+      </div>
+      {% else %}
+      {{ auto_chart(b.chart_data, ' ' + b.unit) }}
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="stat-table">
+      {{ result_table(b) }}
+      {% if b.rows|length > (b.max_rows or 12) %}
+      <div class="table-foot">仅显示前 {{ b.max_rows or 12 }} 行，共 {{ b.rows|length }} 行</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if b.ok %}
+  <details class="sql-box">
+    <summary>查看该统计的 SQL 语句</summary>
+    <pre>{{ b.sql }}</pre>
+  </details>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% endblock %}

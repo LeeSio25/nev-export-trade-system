@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ SYS_SHORT }}{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6zM14 2v5h4"/></symbol>
+  <symbol id="i-ship" viewBox="0 0 24 24"><path d="M3 15l9-3 9 3-2 5H5zM6 12V6h12v6M12 3v3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v7c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5z"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><path d="M2 6h20v12H2zM12 9v6M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14 4a5 5 0 016 6l-4 1-3-3 1-4zM13 8L4 17l3 3 9-9"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 9h18M9 9v11"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15 15l6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16zM14 6l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 00-3 3zM4 4v16"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9H3z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V9l6 3.5V9l6 3.5V4h4v17zM7 17h2M13 17h2"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 3l6 3 6-3v15l-6 3-6-3-6 3V6zM9 3v15M15 6v15"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M3 14l2.2-5h13.6L21 14v5h-3v-2H6v2H3zM7 14h.01M17 14h.01"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></symbol>
+  <symbol id="i-handshake" viewBox="0 0 24 24"><path d="M3 12l4-4 4 3 2-2 4 4-4 5-3-3-3 3zM18 8l3 4-4 4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 7h11v9H2zM13 11h4l4 4v1h-8zM6 19a1.6 1.6 0 100-.1M17 19a1.6 1.6 0 100-.1"/></symbol>
+  <symbol id="i-badge" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8 14l-1 8 5-3 5 3-1-8"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6"/></symbol>
+  <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M5 21h14M7 21v-3h10v3M9 18c-2-2-3-4-3-6a6 6 0 1112 0c0 2-1 4-3 6"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.8 1.8 0 010 3.6h-4"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 17H3zM12 9v5M12 17h.01"/></symbol>
+</svg>
+
+<div class="layout">
+
+  <!-- ================= 侧边栏 ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg class="ic"><use href="#i-bolt"/></svg></div>
+      <div class="brand-text">
+        <strong>NEV 出口贸易</strong>
+        <span>数据管理系统</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item {% if page=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+        <svg class="ic"><use href="#i-home"/></svg><span>系统概览</span>
+      </a>
+
+      {% for m in NAV %}
+      {% set ns = namespace(active=false) %}
+      {% for t in m['items'] %}{% if CURRENT_TABLE == t.name %}{% set ns.active = true %}{% endif %}{% endfor %}
+      <details class="nav-group" open data-group="{{ m.key }}" data-active="{{ '1' if ns.active else '0' }}">
+        <summary class="nav-group-title">
+          <b>{{ m.no }}</b>{{ m.title }}
+          <svg class="ic chev"><use href="#i-chev"/></svg>
+        </summary>
+        {% for t in m['items'] %}
+        <a class="nav-item {% if CURRENT_TABLE == t.name %}active{% endif %}" href="{{ url_for('table_list', table=t.name) }}">
+          <svg class="ic"><use href="#i-{{ t.icon }}"/></svg>
+          <span>{{ t.label }}</span>
+          <em class="count">{{ t.row_count }}</em>
+        </a>
+        {% endfor %}
+      </details>
+      {% endfor %}
+
+      <div class="nav-sep"></div>
+      <a class="nav-item {% if page=='stats' %}active{% endif %}" href="{{ url_for('stats_page') }}">
+        <svg class="ic"><use href="#i-chart"/></svg><span>统计分析与思政</span>
+      </a>
+      <a class="nav-item {% if page=='query' %}active{% endif %}" href="{{ url_for('query_page') }}">
+        <svg class="ic"><use href="#i-bolt"/></svg><span>SQL 演示台</span>
+      </a>
+      <a class="nav-item {% if page=='dictionary' %}active{% endif %}" href="{{ url_for('dictionary') }}">
+        <svg class="ic"><use href="#i-book"/></svg><span>数据字典 / ER</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <svg class="ic"><use href="#i-db"/></svg>
+      <div><b>cnev_export_trade_db</b><span>MySQL 9.4 · 18 张表</span></div>
+    </div>
+  </aside>
+
+  <!-- ================= 主区域 ================= -->
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <a href="{{ url_for('dashboard') }}">首页</a>
+        {% block crumb %}{% endblock %}
+      </div>
+      <div class="topbar-right">
+        <span class="pill">{{ COURSE_NAME }}</span>
+        <span class="pill ghost">{{ GROUP_NAME }}</span>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-wrap">
+        {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">
+          <span>{{ msg }}</span>
+          <button class="flash-x" type="button" onclick="this.parentNode.remove()">
+            <svg class="ic"><use href="#i-x"/></svg>
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+
+    <footer class="foot">
+      {{ SYS_NAME }} · {{ COURSE_NAME }} · {{ GROUP_NAME }}
+      <span class="dot">·</span> Flask + Jinja2 + MySQL
+    </footer>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

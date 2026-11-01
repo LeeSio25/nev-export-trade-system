@@ -1,0 +1,90 @@
+{# ============ 纯 CSS / SVG 图表宏：不依赖任何 JS 图表库 ============ #}
+
+{% macro line_chart(cd, unit='') %}
+<div class="chart-line">
+  <svg viewBox="0 0 {{ cd.w }} {{ cd.h }}" class="svg-line" role="img">
+    {% for g in cd.grid %}
+    <line x1="{{ cd.pad_l }}" y1="{{ g.y }}" x2="{{ cd.w - cd.pad_r }}" y2="{{ g.y }}" class="grid-line"/>
+    <text x="4" y="{{ g.y + 4 }}" class="axis-text">{{ g.val }}</text>
+    {% endfor %}
+    {% if cd.area %}<path d="{{ cd.area }}" class="line-area"/>{% endif %}
+    <polyline points="{{ cd.polyline }}" class="line-path"/>
+    {% for p in cd.points %}
+    <circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" class="line-dot"/>
+    <text x="{{ p.x }}" y="{{ p.y - 10 }}" class="point-text">{{ p.value }}</text>
+    {% endfor %}
+  </svg>
+  <div class="x-labels" style="padding-left:{{ cd.pad_l }}px;padding-right:{{ cd.pad_r }}px">
+    {% for p in cd.points %}<span>{{ p.label }}</span>{% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+
+{% macro bar_chart(cd, unit='', max_items=None) %}
+<div class="bars">
+  {% set items = cd['items'][:max_items] if max_items else cd['items'] %}
+  {% for it in items %}
+  <div class="bar-row">
+    <div class="bar-label" title="{{ it.label }}">{{ it.label }}</div>
+    <div class="bar-track">
+      <div class="bar-fill" style="width:{{ it.pct if it.pct > 1.5 else 1.5 }}%"></div>
+    </div>
+    <div class="bar-value">{{ it.value|num }}{{ unit }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{% macro grouped_chart(cd, unit='') %}
+<div class="bars grouped">
+  {% if cd.legend %}
+  <div class="legend">
+    <span><i class="swatch s1"></i>{{ cd.legend[0] }}</span>
+    <span><i class="swatch s2"></i>{{ cd.legend[1] if cd.legend|length > 1 else '' }}</span>
+  </div>
+  {% endif %}
+  {% for it in cd['items'] %}
+  <div class="bar-row dual">
+    <div class="bar-label" title="{{ it.label }}">{{ it.label }}</div>
+    <div class="bar-track">
+      <div class="bar-fill s1" style="width:{{ it.pct if it.pct > 1 else 1 }}%"><b>{{ it.value }}</b></div>
+      <div class="bar-fill s2" style="width:{{ it.pct2 if it.pct2 > 1 else 1 }}%"><b>{{ it.value2 }}</b></div>
+    </div>
+    <div class="bar-value">{{ it.value }} / {{ it.value2 }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+
+{% macro donut_chart(cd, unit='') %}
+<div class="donut-wrap">
+  <div class="donut" style="background:{{ cd.gradient }}">
+    <div class="donut-hole">
+      <b>{{ cd.total|num }}</b>
+      <span>{{ unit }}</span>
+    </div>
+  </div>
+  <ul class="donut-legend">
+    {% for it in cd['items'] %}
+    <li>
+      <i class="swatch" style="background:{{ it.color }}"></i>
+      <span class="dl-label">{{ it.label }}</span>
+      <span class="dl-val">{{ it.value|num }}{{ unit }}</span>
+      <span class="dl-pct">{{ it.pct }}%</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endmacro %}
+
+
+{% macro auto_chart(cd, unit='') %}
+  {% if cd.type == 'note' %}<div class="chart-note-box">{{ cd.text }}</div>
+  {% elif cd.type == 'line' %}{{ line_chart(cd, unit) }}
+  {% elif cd.type == 'donut' %}{{ donut_chart(cd, unit) }}
+  {% elif cd.type == 'grouped' %}{{ grouped_chart(cd, unit) }}
+  {% else %}{{ bar_chart(cd, unit) }}{% endif %}
+{% endmacro %}

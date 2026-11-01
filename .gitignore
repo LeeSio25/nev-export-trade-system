@@ -1,6 +1,7 @@
 # Python 缓存
 __pycache__/
 *.pyc
+secrets_local.py
 
 # 日志文件
 *.log
