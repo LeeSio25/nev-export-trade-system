@@ -1,0 +1,13 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 日志文件
+*.log
+
+# VS Code 配置
+.vscode/
+
+# 密码和密钥
+.env
+*.key
